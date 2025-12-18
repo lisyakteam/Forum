@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Лисяк | Форум</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/app/main.tsx"></script>
+  </body>
+  <style>
+    :root {
+      --bg: #0f1014;
+      --surface: #1b1c22;
+      --surface-h: #272832;
+      --border: #323442;
+      --primary: #f59e0b; /* Amber 500 */
+      --secondary: #d97706; /* Amber 600 */
+      --accent: #fbbf24;
+      --text: #ffffff;
+      --text-muted: #9ca3af;
+      --danger: #ef4444;
+      --radius: 12px;
+      --nav-height: 64px;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="light"] {
+      --bg: #f3f4f6;
+      --surface: #ffffff;
+      --surface-h: #f9fafb;
+      --border: #e5e7eb;
+      --primary: #d97706;
+      --secondary: #b45309;
+      --text: #111827;
+      --text-muted: #6b7280;
+    }
+
+    body {
+      background-color: var(--bg);
+    }
+  </style>
+</html>
