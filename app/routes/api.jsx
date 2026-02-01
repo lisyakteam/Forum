@@ -1,5 +1,5 @@
 // api.js
-const API_URL = 'https://лисяк.рф/api';
+const API_URL = 'https://lisyak.net/api';
 
 export const api = {
     getToken() {
