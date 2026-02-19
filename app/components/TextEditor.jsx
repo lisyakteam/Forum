@@ -31,7 +31,7 @@ export const TextEditor = ({ value, onChange, placeholder }) => {
     };
 
     return (
-        <div style={{border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', background: 'var(--bg)'}}>
+        <div class="animate-in" style={{border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', background: 'var(--bg)'}}>
         <div className="editor-toolbar">
         <button className="toolbar-btn" onClick={() => insertTag('[b]', '[/b]')} title="Жирный"><Bold size={16}/></button>
         <button className="toolbar-btn" onClick={() => insertTag('[i]', '[/i]')} title="Курсив"><Italic size={16}/></button>

@@ -1,5 +1,6 @@
-// api.js
-const API_URL = 'https://lisyak.net/api';
+export const API_URL = import.meta.env.VITE_API_URL
+
+console.log('Injected API_URL', API_URL)
 
 export const api = {
     getToken() {
@@ -42,7 +43,7 @@ export const api = {
     createPost: (data) => api.request('/posts', 'POST', data),
 
     updateProfile: (data) => api.request('/profile', 'PUT', data),
-    getThreadById: (id) => api.request(`/thread/view/${id}`),
+    getThreadById: (id) => api.request(`/posts/${id}`),
 
     toggleReaction: (postId, emoji) => api.request('/react', 'POST', { postId, emoji }),
     getStats: () => api.request('/stats'),
@@ -50,7 +51,8 @@ export const api = {
     deletePost: (id) => api.request(`/posts/${id}`, 'DELETE'),
     editPost: (id, content) => api.request(`/posts/${id}`, 'PUT', { content }),
 
-    // Сохранение токена
+    requestSkins: (name) => api.request(`/skins?usernames=${name}`, `GET`),
+
     setToken(token) {
         if (typeof window !== 'undefined') {
             localStorage.setItem('token', token);

@@ -8,14 +8,20 @@ import {
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 
+import { getSkin } from '$/utils/skins'
 import { parseBBCode } from '$/utils/bbcode'
+import { Avatar } from '$/utils/skins'
+
+const VISUAL_ROLE = {
+    admin: 'Персонал'
+}
 
 export const PostItem = ({ post, user, onReact, onDelete, onQuote, onEdit, openUserProfile }) => {
-    const author = post.author || { name: 'Unknown', role: 'user', avatar: '' };
+    const author = post.author || { name: 'Unknown', role: 'user' };
     const reactions = post.reactions || {};
 
-    const [isEditing, setIsEditing] = useState(false);
-    const [editContent, setEditContent] = useState(post.content);
+    const [ isEditing, setIsEditing ] = useState(false);
+    const [ editContent, setEditContent ] = useState(post.content);
     const isOwner = user?.id === post.author_id;
     const isStaff = user?.role === 'admin' || user?.role === 'moderator';
 
@@ -28,28 +34,33 @@ export const PostItem = ({ post, user, onReact, onDelete, onQuote, onEdit, openU
 
     const myReaction = Object.keys(reactions).find(emoji => reactions[emoji]?.includes(user?.id));
 
+    console.log(author)
+
     return (
-        <div className="card" style={{padding: 0, overflow: 'visible'}}>
-        <div style={{padding: '12px 20px', background: 'var(--surface-h)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)'}}>
-        <div onClick={() => openUserProfile(author.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
-        <img src={author.avatar} style={{width: 32, height: 32, borderRadius: '50%'}} />
-        <div style={{fontWeight: 'bold', color: 'var(--primary)'}}>{author.name}</div>
-        <span className={`role-badge role-${author.role}`}>{author.role}</span>
-        </div>
+        <div className="animate-in card" style={{padding: 0, overflow: 'visible'}}>
+            <div style={{padding: '12px 20px', background: 'var(--surface-h)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)'}}>
+                <div onClick={() => openUserProfile(author.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+                <Avatar
+                key={ author.username }
+                username={ author.username }
+                name={ author.name }/>
+                <div style={{fontWeight: 'bold', color: 'var(--primary)'}}>{author.name}</div>
+                { author.role ? (<span className={`role-badge role-${author.role}`}>{VISUAL_ROLE[author.role]}</span>) : ''}
+            </div>
 
-        <div style={{display: 'flex', gap: 8}}>
+            <div style={{display: 'flex', gap: 8}}>
 
-        <button className="btn-ghost" style={{padding: 4}} onClick={() => onQuote(author.name, post.content)} title="Ответить">
-        <Quote size={16}/>
-        </button>
+            <button className="btn-ghost" style={{padding: 4}} onClick={() => onQuote(author.name, post.content)} title="Ответить">
+                <Quote size={16}/>
+            </button>
 
-        {(isOwner || isStaff) && (
-            <>
-            {isOwner && <button className="btn-ghost" onClick={() => setIsEditing(!isEditing)} style={{padding: 4}}><Edit3 size={16}/></button>}
-            <button className="btn-ghost" onClick={() => onDelete(post.id)} style={{padding: 4, color: 'var(--danger)'}}><Trash2 size={16}/></button>
-            </>
-        )}
-        </div>
+            {(isOwner || isStaff) && (
+                <>
+                {isOwner && <button className="btn-ghost" onClick={() => setIsEditing(!isEditing)} style={{padding: 4}}><Edit3 size={16}/></button>}
+                <button className="btn-ghost" onClick={() => onDelete(post.id)} style={{padding: 4, color: 'var(--danger)'}}><Trash2 size={16}/></button>
+                </>
+            )}
+            </div>
         </div>
 
         <div style={{padding: '20px'}}>
@@ -72,7 +83,9 @@ export const PostItem = ({ post, user, onReact, onDelete, onQuote, onEdit, openU
         {reactionEntries.map(([emoji, ids]) => {
             const isMine = ids.includes(user?.id);
             return (
-                <div key={emoji}
+                <div
+                class="animate-in"
+                key={emoji}
                 onClick={() => onReact(post.id, emoji)}
                 style={{
                     border: `1px solid ${isMine ? 'var(--primary)' : 'var(--border)'}`,

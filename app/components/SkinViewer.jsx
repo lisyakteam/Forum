@@ -4,7 +4,11 @@ export const SkinViewer3D = ({ skinUrl, width = 200, height = 300 }) => {
     const canvasRef = useRef(null);
     const viewerRef = useRef(null);
 
+    console.log('updated')
+
     useEffect(() => {
+        console.log('Updating skin...')
+
         if (!window.skinview3d) {
             const script = document.createElement('script');
             script.src = "https://bs-community.github.io/skinview3d/js/skinview3d.bundle.js";
@@ -20,6 +24,8 @@ export const SkinViewer3D = ({ skinUrl, width = 200, height = 300 }) => {
             if (viewerRef.current) {
                 viewerRef.current.dispose();
             }
+
+            console.log('Skin', skinUrl)
 
             // @ts-ignore
             const viewer = new window.skinview3d.SkinViewer({
@@ -39,7 +45,7 @@ export const SkinViewer3D = ({ skinUrl, width = 200, height = 300 }) => {
         }
 
         return () => {};
-    }, [skinUrl, width, height]);
+    }, [ skinUrl, width, height ]);
 
     return (
         <div style={{background: 'radial-gradient(circle, var(--surface-h) 0%, var(--surface) 100%)', borderRadius: 12, display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid var(--border)'}}>

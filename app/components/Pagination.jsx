@@ -6,7 +6,7 @@ import {
     Quote, Trash2
 } from 'lucide-react';
 
-export const Pagination = ({ current, totalItems, limit = 5, onChange }) => {
+export const Pagination = ({ current, totalItems, limit = 10, onChange }) => {
     const totalPages = Math.ceil(totalItems / limit);
 
     if (totalPages <= 1) return null;

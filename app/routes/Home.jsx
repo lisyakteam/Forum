@@ -12,33 +12,14 @@ import { AuthScreen } from '$/components/AuthScreen'
 import { ProfileSettings } from '$/components/ProfileSettings'
 import { PostItem } from '$/components/PostItem'
 import { TextEditor } from '$/components/TextEditor'
+import { OtherProfile } from '$/components/OtherProfile'
 import { MainTheme as Styles } from '$/styles.jsx'
 
-import { api } from './api';
+import { api } from '$/utils/api';
 
 import { parseBBCode } from '$/utils/bbcode'
-
-
-const useWebSocket = (threadId, onMessage, onArchive, user) => {
-  useEffect(() => {
-    if (!threadId) return;
-    const ws = new WebSocket('wss://lisyak.net');
-
-    ws.onopen = () => {
-      ws.send(JSON.stringify({ type: 'subscribe', threadId }));
-      if (user) ws.send(JSON.stringify({ type: 'auth', userId: user.id }));
-    };
-
-    ws.onmessage = (event) => {
-      const msg = JSON.parse(event.data);
-      if (msg.type === 'new_message') onMessage(msg.data);
-      if (msg.type === 'thread_archived') onArchive();
-    };
-
-      return () => ws.close();
-  }, [threadId, user?.id]);
-};
-
+import { useWebSocket } from '$/utils/websocket'
+import { Avatar } from '$/utils/skins'
 
 const NotificationBell = ({ notifications = [], onRead }) => {
   const [open, setOpen] = useState(false);
@@ -81,30 +62,30 @@ const InfoIcon = () => <span style={{display: 'inline-block', width: 14, height:
 
 
 export default function Forum() {
-  const [theme, setTheme] = useState('dark');
-  const [appLoading, setAppLoading] = useState(true);
-  const [view, setView] = useState('loading');
-  const [user, setUser] = useState(null);
-  const [notifications, setNotifications] = useState([]);
+  const [ theme, setTheme ] = useState('dark');
+  const [ appLoading, setAppLoading ] = useState(true);
+  const [ view, setView ] = useState('loading');
+  const [ user, setUser ] = useState(null);
+  const [ notifications, setNotifications ] = useState([]);
 
-  const [categories, setCategories] = useState([]);
-  const [threads, setThreads] = useState({ data: [], total: 0 });
-  const [posts, setPosts] = useState({ data: [], total: 0 });
+  const [ categories, setCategories ] = useState([]);
+  const [ threads, setThreads ] = useState({ data: [], total: 0 });
+  const [ posts, setPosts ] = useState({ data: [], total: 0 });
 
-  const [activeCategory, setActiveCategory] = useState(null);
-  const [activeThread, setActiveThread] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [ activeCategory, setActiveCategory ] = useState(null);
+  const [ activeThread, setActiveThread ] = useState(null);
+  const [ currentPage, setCurrentPage ] = useState(1);
 
-  const [viewingUser, setViewingUser] = useState(null);
+  const [ viewingUser, setViewingUser ] = useState(null);
 
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [newThreadTitle, setNewThreadTitle] = useState('');
-  const [newThreadContent, setNewThreadContent] = useState('');
-  const [replyText, setReplyText] = useState('');
+  const [ createModalOpen, setCreateModalOpen ] = useState(false);
+  const [ newThreadTitle, setNewThreadTitle ] = useState('');
+  const [ newThreadContent, setNewThreadContent ] = useState('');
+  const [ replyText, setReplyText ] = useState('');
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [onlineStats, setOnlineStats] = useState(0);
-  const [toasts, setToasts] = useState([]);
+  const [ searchQuery, setSearchQuery ] = useState('');
+  const [ onlineStats, setOnlineStats ] = useState(0);
+  const [ toasts, setToasts ] = useState([]);
 
   const showToast = (msg, type = 'info') => {
     const id = Math.random().toString(36).substr(2, 9);
@@ -127,7 +108,7 @@ export default function Forum() {
   );
 
   const groupedCategories = useMemo(() => {
-    const groups = { 'official': [], 'general': [], 'admin': [], 'archive': [] };
+    const groups = { 'general': [], 'game': [], 'random': [] };
     categories.forEach(c => {
       if (c.id === 'archive' && user?.role !== 'admin') return;
 
@@ -210,7 +191,14 @@ export default function Forum() {
       } else if (threadId) {
         try {
           const threadData = await api.getThreadById(threadId);
-          setActiveThread(threadData);
+          console.log(threadData)
+          setPosts(threadData);
+          setActiveThread({
+            id: threadId,
+            title: threadData.title,
+            categoryId: threadData.category_id
+          });
+          setCurrentPage(1);
           setView('forum');
         } catch (e) {
           console.error("Тема не найдена");
@@ -230,14 +218,14 @@ export default function Forum() {
   }, []);
 
   useEffect(() => {
-    if (activeCategory) {
+    if (activeCategory && activeCategory.id !== "search") {
       setThreads({ data: [], total: 0 });
       api.getThreads(activeCategory.id, currentPage).then(setThreads).catch(console.error);
     }
   }, [activeCategory, currentPage]);
 
   useEffect(() => {
-    if (activeThread) {
+    if (activeThread?.id) {
       setPosts({ data: [], total: 0 });
       api.getPosts(activeThread.id, currentPage).then(setPosts).catch(console.error);
     }
@@ -410,11 +398,18 @@ export default function Forum() {
     if (e.key === 'Enter' && searchQuery.trim()) {
       setAppLoading(true);
       try {
-        const results = await api.request(`/search?q=${encodeURIComponent(searchQuery)}`);
+        const response = await api.request(`/search?q=${encodeURIComponent(searchQuery)}`);
+
+        const { results } = response
+
+        console.log('Search results', results)
+
+        setActiveThread(null);
+        setView('forum');
 
         setThreads({
-          data: Array.isArray(results) ? results : [],
-                   total: results.length || 0
+          data: results || [],
+          total: results?.length || 0
         });
 
         setActiveCategory({
@@ -422,9 +417,6 @@ export default function Forum() {
           title: 'Результаты поиска',
           description: `По запросу: ${searchQuery}`
         });
-
-        setActiveThread(null);
-        setView('forum');
 
         const url = new URL(window.location);
         url.search = `?q=${encodeURIComponent(searchQuery)}`;
@@ -484,7 +476,7 @@ export default function Forum() {
       </button>
       {user ? (
         <div className="btn-ghost" onClick={() => handleNavigation('account')} style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer', padding: '6px 12px', borderRadius: 20, border: '1px solid var(--border)' }}>
-        <img src={user.avatar} style={{ width: 24, height: 24, borderRadius: '50%' }} alt="avatar" />
+        <Avatar username={ user.username } styles={{ width: 24, height: 24 }}/>
         <span style={{ fontWeight: 600 }}>{user.name}</span>
         </div>
       ) : (
@@ -495,30 +487,20 @@ export default function Forum() {
 
       <div className="container">
       {view === 'account' ? (
-        <ProfileSettings user={user} onUpdate={(u) =>
+        <ProfileSettings
+        user={user}
+        onUpdate={(u) =>
           api.updateProfile(u).then(res => {
             setUser(res);
             showToast('Профиль сохранен');
-          })} onBack={() => handleNavigation('main')} />
-      ) : view === 'user_profile' ? (
-        <div className="animate-in">
-        <button className="btn btn-ghost" onClick={() => setView('forum')}><ArrowLeft /> Назад</button>
-        <div className="profile-layout">
-        <div className="card" style={{ textAlign: 'center' }}>
-        <SkinViewer3D skinUrl={`https://minotar.net/skin/${viewingUser.game_nick || viewingUser.name}`} />
-        <h2>{viewingUser.name}</h2>
-        <span className={`role-badge role-${viewingUser.role}`}>{viewingUser.role}</span>
-        </div>
-        <div className="card">
-        <h3>Инфо</h3>
-        <p>Игровой ник: {viewingUser.game_nick || 'Не указан'}</p>
-        <div className="signature-box">
-        {parseBBCode(viewingUser.signature)}
-        </div>
-        </div>
-        </div>
-        </div>
-      ) : (
+          })}
+          onBack={() => handleNavigation('main')} />
+      ) : view === 'user_profile' ?
+        <OtherProfile
+          setView={setView}
+          viewingUser={viewingUser}
+        />
+      : (
         <div className="grid-layout">
         <div className="sidebar-left">
         <div className="card">
@@ -527,22 +509,22 @@ export default function Forum() {
         <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 10, paddingLeft: 10 }}>БЫСТРЫЙ ДОСТУП</div>
 
         <button className="btn btn-ghost sidebar-btn" onClick={() => {
-          const banCat = categories.find(c => c.id === 'c1' || c.title === 'Жалобы');
+          const banCat = categories.find(c => c.title === 'Жалобы');
           if (banCat) handleNavigation('category', banCat);
         }}><Lock size={18} /> Жалобы</button>
 
         <button className="btn btn-ghost sidebar-btn" onClick={() => {
-          const offtopic = categories.find(c => c.type === 'offtopic');
+          const offtopic = categories.find(c => c.title === "Курилка");
           if (offtopic) handleNavigation('category', offtopic);
-        }}><MessageCircle size={18} /> Флудилка</button>
+        }}><MessageCircle size={18} /> Курилка</button>
         </div>
         </div>
 
-        <div style={{ minHeight: 400 }}>
+        <div className="content">
         {activeThread ? (
           <div className="animate-in">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <button className="btn-ghost" style={{ padding: 8 }} onClick={() => handleNavigation('category', categories.find(c => c.id === activeThread.categoryId))}><ArrowLeft /></button>
+          <button className="btn btn-ghost" style={{ padding: 8 }} onClick={() => handleNavigation('category', categories.find(c => c.id === activeThread.categoryId))}><ArrowLeft /></button>
           <h2 style={{ margin: 0, lineHeight: 1.2 }}>{activeThread.title}</h2>
           </div>
 
@@ -570,14 +552,14 @@ export default function Forum() {
 
           <h4 style={{ marginTop: '40px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}><Edit3 size={18} /> Ваш ответ</h4>
           <TextEditor value={replyText} onChange={setReplyText} placeholder="Напишите сообщение..." />
-          <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+          <div class="animate-in" style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
           <button className="btn btn-primary" onClick={sendReply}><Send size={16} /> Отправить ответ</button>
           </div>
           </div>
         ) : activeCategory ? (
           <div className="animate-in">
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20, alignItems: 'center' }}>
-          <button className="btn-ghost flex-gap" onClick={() => handleNavigation('main')}><ArrowLeft size={18} /> К разделам</button>
+          <button style={{ padding: '10px' }} className="btn btn-ghost flex-gap" onClick={() => handleNavigation('main')}><ArrowLeft size={18} /> К разделам</button>
           <button className="btn-primary create-theme flex-gap" onClick={() => setCreateModalOpen(true)}><Edit3 size={18} /> Создать тему</button>
           </div>
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -586,27 +568,32 @@ export default function Forum() {
           <div className="text-muted" style={{ marginTop: 5 }}>{activeCategory.description}</div>
           </div>
           {threads.data.length === 0 ? (
-            <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+            <div class="animate-in" style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
             В этом разделе пока нет тем. Будьте первыми!
             </div>
           ) : (
             <>
             {threads.data.map(t => (
-              <div key={t.id} className="cat-item" onClick={() => handleNavigation('thread', t)}>
+              <div key={t.id} className="animate-in cat-item" onClick={() => handleNavigation('thread', t)}>
               <div className="cat-icon" style={{ background: t.pinned ? 'rgba(239, 68, 68, 0.1)' : undefined, color: t.pinned ? 'var(--danger)' : undefined }}>
               {t.pinned ? <Shield size={24} /> : <MessageSquare size={24} />}
               </div>
               <div>
               <div style={{ fontWeight: 600, fontSize: '1.05rem', marginBottom: 4 }}>
-              {!!t.pinned && <span style={{ color: 'var(--danger)', marginRight: 5 }}>📌 ВАЖНО:</span>}
+              {!!t.pinned && <span style={{ color: 'var(--danger)', marginRight: 5 }}>📌</span>}
               {t.title}
               </div>
               <div className="text-muted" style={{ fontSize: '0.85rem' }}>
-              Автор: {t.author_name || 'Система'} • {new Date(t.createdAt || t.created_at).toLocaleDateString()}
+              Автор: {t.author_name} • {new Date(t.createdAt || t.created_at).toLocaleDateString()}
               </div>
+              </div>
+              <div class="thread-info">
+              <div className="text-muted" style={{ fontSize: '0.9rem', textAlign: 'right', fontWeight: 600 }}>
+              {t.replies} <MessageCircle size={14}/>
               </div>
               <div className="text-muted" style={{ fontSize: '0.9rem', textAlign: 'right', fontWeight: 600 }}>
-              {t.replies} <span style={{ fontSize: '0.7rem', fontWeight: 400, display: 'block' }}>ОТВЕТОВ</span>
+              {t.views} <Eye size={16}/>
+              </div>
               </div>
               </div>
             ))}
@@ -629,8 +616,8 @@ export default function Forum() {
           <div className="animate-in">
           {Object.entries(groupedCategories).map(([type, cats]) => {
             if (cats.length === 0) return null;
-            const titles = { 'official': 'Официальные новости', 'general': 'Игровые серверы', 'admin': 'Персонал' };
-            const icons = { 'official': <Shield size={16} />, 'general': <Gamepad2 size={16} />, 'admin': <Lock size={16} /> };
+            const titles = { 'general': 'Официальные топики', 'game': 'Игровые серверы', 'random': 'Разношерстное' };
+            const icons = { 'general': <Shield size={16} />, 'game': <Gamepad2 size={16} />, 'random': <Lock size={16} /> };
 
             return (
               <div key={type}>
@@ -645,7 +632,7 @@ export default function Forum() {
                 <div style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: 4 }}>{cat.title}</div>
                 <div className="text-muted" style={{ fontSize: '0.9rem' }}>{cat.description}</div>
                 </div>
-                <ChevronRight className="text-muted" />
+                <div class="open-btn"><ChevronRight className="text-muted" /></div>
                 </div>
               ))}
               </div>
@@ -660,7 +647,7 @@ export default function Forum() {
         <div className="card" style={{ background: 'linear-gradient(145deg, var(--surface), var(--surface-h))' }}>
         <div style={{ fontWeight: 800, color: 'var(--primary)', marginBottom: 15, display: 'flex', alignItems: 'center', gap: 8 }}><Gamepad2 /> Лисяк</div>
         <div style={{ fontSize: '0.9rem', lineHeight: 1.5, color: 'var(--text-muted)' }}>
-        Лучший сервер Minecraft.
+        Лучший сервер Minecraft (с худшим форумом)
         </div>
         <button
         className="btn btn-primary w-full"
@@ -673,12 +660,12 @@ export default function Forum() {
         </button>
         </div>
 
-        <div className="card">
+        {/*<div className="card">
         <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: 15 }}>СТАТИСТИКА</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.9rem' }}>
         <span>Онлайн:</span> <span style={{ color: 'var(--success)' }}>{onlineStats}</span>
         </div>
-        </div>
+        </div>*/}
         </div>
         </div>
       )}

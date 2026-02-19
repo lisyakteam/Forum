@@ -10,16 +10,30 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 import { SkinViewer3D } from '$/components/SkinViewer'
 import { TextEditor } from '$/components/TextEditor'
+import { getSkin } from '$/utils/skins'
 
 export const ProfileSettings = ({ user, onUpdate, onBack }) => {
     const [ form, setForm ] = useState({ ...user });
-    const [ previewName, setPreviewName ] = useState(user.gameNick || user.name);
+
+    const [ previewName, setPreviewName ] = useState(user.name);
+    const [ username, setUsername ] = useState(user.username);
+    const [ skinUrl, setSkinUrl ] = useState(null)
 
     const handleBlur = () => {
-        setPreviewName(form.gameNick || form.name);
+        setPreviewName(form.name);
+        setUsername(form.username);
     };
 
-    const skinUrl = `https://minotar.net/skin/${previewName}`;
+    useEffect(() => {
+        if (!username) return;
+
+        (async() => {
+            const skin = await getSkin(username)
+            console.log('got skin', skin)
+            setSkinUrl(skin)
+        })();
+        return () => {}
+    }, [ username ])
 
     return (
         <div className="animate-in">
@@ -32,7 +46,7 @@ export const ProfileSettings = ({ user, onUpdate, onBack }) => {
         <h3>Ваш скин</h3>
         <SkinViewer3D skinUrl={skinUrl} />
         <div style={{marginTop: 12, fontSize: '0.8rem'}} className="text-muted">
-        Предпросмотр ника: {previewName}
+        Предпросмотр {username}
         </div>
         </div>
 
@@ -42,7 +56,7 @@ export const ProfileSettings = ({ user, onUpdate, onBack }) => {
         <div className="profile-field">
         <label>Отображаемое имя</label>
         <input
-        value={form.name}
+        value={form.name || ''}
         onChange={e => setForm({...form, name: e.target.value})}
         onBlur={handleBlur}
         />
@@ -53,13 +67,13 @@ export const ProfileSettings = ({ user, onUpdate, onBack }) => {
         Игровой никнейм
         {!!user.game_linked && (
             <span style={{color: 'var(--success)', marginLeft: 8}}>
-            (Привязан)
+            (привязан)
             </span>
         )}
         </label>
         <input
-        value={form.gameNick || ''}
-        onChange={e => setForm({...form, gameNick: e.target.value})}
+        value={form.username || ''}
+        onChange={e => setForm({...form, username: e.target.value})}
         disabled={!!user.game_linked}
         onBlur={handleBlur}
         placeholder="Steve"
