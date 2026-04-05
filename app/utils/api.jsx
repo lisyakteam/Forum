@@ -1,4 +1,4 @@
-export const API_URL = import.meta.env.VITE_API_URL
+export const API_URL = import.meta.env.MODE === "production" ? "/api" : "http://localhost:3006/api"
 
 console.log('Injected API_URL', API_URL)
 

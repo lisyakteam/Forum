@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-export const WEBSOCKET_URL = import.meta.env.VITE_WEBSOCKET_URL
+export const WEBSOCKET_URL = import.meta.env.MODE === "production" ? "/api/ws" : "ws://localhost:3006/api/ws"
 
 export const useWebSocket = (threadId, onMessage, onArchive, user) => {
     useEffect(() => {
